@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<h1>Team log in</h1>
+<form x-data="{ error: '' }" @submit.prevent="
+  fetch('/api/auth/team/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name: $refs.name.value, password: $refs.password.value }),
+  }).then(async r => {
+    if (r.ok) { window.location.href = '/challenges'; return; }
+    const body = await r.json();
+    error = body.detail || 'login failed';
+  })
+">
+  <label>Team name <input x-ref="name" name="name" required></label>
+  <label>Password <input x-ref="password" type="password" name="password" required></label>
+  <button type="submit">Log in</button>
+  <p x-show="error" x-text="error" class="error"></p>
+</form>
+<p>New here? <a href="/register">Register a team</a>.</p>
+{% endblock %}

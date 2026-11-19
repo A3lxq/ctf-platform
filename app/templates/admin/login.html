@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Admin log in{% endblock %}
+{% block content %}
+<h1>Admin log in</h1>
+<form x-data="{ error: '' }" @submit.prevent="
+  fetch('/api/auth/admin/login', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ username: $refs.username.value, password: $refs.password.value }),
+  }).then(async r => {
+    if (r.ok) { window.location.href = '/admin/games'; return; }
+    const body = await r.json();
+    error = body.detail || 'login failed';
+  })
+">
+  <label>Username <input x-ref="username" name="username" required></label>
+  <label>Password <input x-ref="password" type="password" name="password" required></label>
+  <button type="submit">Log in</button>
+  <p x-show="error" x-text="error" class="error"></p>
+</form>
+{% endblock %}

@@ -1,0 +1,11 @@
+/* Minimal, functional Phase-A styling -- Phase D (frontend polish) replaces this. */
+body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+header a { font-weight: bold; text-decoration: none; color: #222; }
+label { display: block; margin: 0.75rem 0; }
+input { display: block; width: 100%; padding: 0.4rem; margin-top: 0.25rem; box-sizing: border-box; }
+button { margin-top: 1rem; padding: 0.5rem 1rem; }
+.error { color: #b00020; }
+/* Honeypot field: hidden from real users, never shown via CSS. A bot's
+   generic form-filler, which doesn't execute CSS, is the one thing
+   expected to still find and fill it. */
+.hp-field { position: absolute; left: -9999px; top: -9999px; }
