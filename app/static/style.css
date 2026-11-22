@@ -1,10 +1,78 @@
-/* Minimal, functional Phase-A styling -- Phase D (frontend polish) replaces this. */
-body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #222; }
-header a { font-weight: bold; text-decoration: none; color: #222; }
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --border: #2a2e37;
+  --text: #e4e6eb;
+  --muted: #8b90a0;
+  --accent: #5b8cff;
+  --good: #3fb950;
+  --bad: #f85149;
+  --warn: #d29922;
+}
+
+* { box-sizing: border-box; }
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+  color: var(--text);
+  background: var(--bg);
+}
+
+header { padding: 1rem 0; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+header nav { display: flex; justify-content: space-between; align-items: center; }
+header a.brand { font-weight: bold; font-size: 1.1rem; text-decoration: none; color: var(--text); }
+header .nav-links a { color: var(--text); text-decoration: none; margin-left: 1rem; }
+header .nav-links a:hover { color: var(--accent); }
+header .nav-who { margin-left: 1rem; color: var(--muted); }
+
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.2rem; margin-top: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+
 label { display: block; margin: 0.75rem 0; }
-input { display: block; width: 100%; padding: 0.4rem; margin-top: 0.25rem; box-sizing: border-box; }
-button { margin-top: 1rem; padding: 0.5rem 1rem; }
-.error { color: #b00020; }
+input, select { display: block; width: 100%; padding: 0.45rem; margin-top: 0.25rem; box-sizing: border-box;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 4px; }
+button, a.button {
+  margin-top: 1rem; padding: 0.5rem 1rem; background: var(--accent); color: white; border: none;
+  border-radius: 4px; cursor: pointer; font-size: 0.95rem; text-decoration: none; display: inline-block;
+}
+a.button.secondary, button.secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
+button:hover, a.button:hover { opacity: 0.88; }
+.error { color: var(--bad); }
+.feedback { color: var(--muted); font-size: 0.9rem; }
+
+form { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin: 0.75rem 0; }
+
+table { width: 100%; border-collapse: collapse; margin: 0.75rem 0 1.5rem; }
+th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+tr.selected { background: rgba(91, 140, 255, 0.08); }
+
+.status-badge {
+  display: inline-block; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.8rem;
+  text-transform: uppercase; background: var(--border); color: var(--text);
+}
+
+.box-group { border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem; background: var(--panel); }
+.box-group h2 { margin-top: 0; border-bottom: none; }
+.instance-panel { margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.instance-panel code { background: var(--bg); padding: 0.2rem 0.4rem; border-radius: 3px; border: 1px solid var(--border); }
+.instance-panel button { margin-top: 0; }
+.countdown { color: var(--warn); font-size: 0.9rem; }
+
+ul.challenge-list { list-style: none; padding: 0; margin: 0; }
+ul.challenge-list li { border-top: 1px solid var(--border); padding: 0.75rem 0; }
+ul.challenge-list li:first-child { border-top: none; }
+ul.challenge-list li.solved strong { color: var(--good); }
+ul.challenge-list form { display: flex; gap: 0.5rem; background: none; border: none; padding: 0; margin: 0.4rem 0 0; }
+ul.challenge-list form input { margin-top: 0; }
+ul.challenge-list form button { margin-top: 0; }
+.solved-badge { color: var(--good); font-weight: 600; }
+.challenge-desc { color: var(--muted); margin: 0.2rem 0; }
+
+table.scoreboard th:first-child, table.scoreboard td:first-child { width: 3rem; }
+
 /* Honeypot field: hidden from real users, never shown via CSS. A bot's
    generic form-filler, which doesn't execute CSS, is the one thing
    expected to still find and fill it. */

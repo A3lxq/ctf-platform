@@ -9,7 +9,43 @@
   <script src="/static/htmx.min.js"></script>
 </head>
 <body>
-  <header><a href="/">Halcyon Protocol</a></header>
+  <header
+    x-data="{ role: null, name: null,
+      logout() {
+        fetch('/api/auth/logout', { method: 'POST' }).then(() => window.location.href = '/');
+      }
+    }"
+    x-init="fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => {
+      if (me) { role = me.role; name = me.name || me.username; }
+    })"
+  >
+    <nav>
+      <a href="/" class="brand">Halcyon Protocol</a>
+      <span class="nav-links">
+        <template x-if="role === 'team'">
+          <span>
+            <a href="/challenges">Challenges</a>
+            <a href="/scoreboard">Scoreboard</a>
+            <span class="nav-who" x-text="name"></span>
+            <a href="#" @click.prevent="logout()">Log out</a>
+          </span>
+        </template>
+        <template x-if="role === 'admin'">
+          <span>
+            <a href="/admin/games">Admin</a>
+            <span class="nav-who" x-text="name"></span>
+            <a href="#" @click.prevent="logout()">Log out</a>
+          </span>
+        </template>
+        <template x-if="!role">
+          <span>
+            <a href="/login">Log in</a>
+            <a href="/register">Register</a>
+          </span>
+        </template>
+      </span>
+    </nav>
+  </header>
   <main>
     {% block content %}{% endblock %}
   </main>

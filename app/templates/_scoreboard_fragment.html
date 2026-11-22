@@ -1,0 +1,17 @@
+{% if not logged_in %}
+<p>Please <a href="/login">log in</a> to view the scoreboard.</p>
+{% elif no_game %}
+<p>No game is currently running.</p>
+{% else %}
+<table class="scoreboard">
+  <thead><tr><th>Rank</th><th>Team</th><th>Score</th></tr></thead>
+  <tbody>
+    {% for e in entries %}
+    <tr><td>{{ e.rank }}</td><td>{{ e.team_name }}</td><td>{{ e.score }}</td></tr>
+    {% endfor %}
+    {% if not entries %}
+    <tr><td colspan="3">No teams yet.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+{% endif %}

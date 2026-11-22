@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Scoreboard{% endblock %}
+{% block content %}
+<h1>Scoreboard</h1>
+<div id="scoreboard-fragment" hx-get="/scoreboard/fragment" hx-trigger="load, every 10s" hx-swap="innerHTML">
+  Loading...
+</div>
+{% endblock %}

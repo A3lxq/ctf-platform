@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Halcyon Protocol{% endblock %}
+{% block content %}
+<h1>Halcyon Protocol</h1>
+<p>A capture-the-flag event across 8 boxes, noob to legendary. Anyone can
+play -- register a team (solo is fine) and jump in.</p>
+<div
+  x-data="{ role: null }"
+  x-init="fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => { role = me ? me.role : null })"
+>
+  <template x-if="role === 'team'">
+    <p><a href="/challenges" class="button">Go to challenges</a></p>
+  </template>
+  <template x-if="role === 'admin'">
+    <p><a href="/admin/games" class="button">Go to admin dashboard</a></p>
+  </template>
+  <template x-if="!role">
+    <p>
+      <a href="/register" class="button">Register your team</a>
+      <a href="/login" class="button secondary">Log in</a>
+    </p>
+  </template>
+</div>
+{% endblock %}

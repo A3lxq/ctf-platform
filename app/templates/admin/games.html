@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<script>
+function adminApp() {
+  return {
+    games: [],
+    teams: [],
+    instances: [],
+    selectedGameId: null,
+    challenges: [],
+    newGameName: '',
+    newChallenge: { box_id: '', flag_number: 1, title: '', points: 100, description: '' },
+    init() {
+      this.refreshGames();
+      this.refreshTeams();
+      this.refreshInstances();
+    },
+    refreshGames() {
+      fetch('/api/admin/games').then(r => {
+        if (r.status === 401) { window.location.href = '/admin/login'; return Promise.reject(); }
+        return r.json();
+      }).then(games => {
+        this.games = games;
+        if (this.selectedGameId === null && games.length) this.selectGame(games[games.length - 1].id);
+      }).catch(() => {});
+    },
+    refreshTeams() {
+      fetch('/api/admin/teams').then(r => r.json()).then(teams => { this.teams = teams; });
+    },
+    refreshInstances() {
+      fetch('/api/admin/instances').then(r => r.json()).then(instances => { this.instances = instances; });
+    },
+    selectGame(id) {
+      this.selectedGameId = id;
+      fetch(`/api/admin/games/${id}/challenges`).then(r => r.json()).then(chals => { this.challenges = chals; });
+    },
+    createGame() {
+      if (!this.newGameName.trim()) return;
+      fetch('/api/admin/games', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: this.newGameName }),
+      }).then(async r => {
+        if (!r.ok) { const b = await r.json(); alert(b.detail); return; }
+        this.newGameName = '';
+        this.refreshGames();
+      });
+    },
+    startGame(id) {
+      fetch(`/api/admin/games/${id}/start`, { method: 'POST' }).then(async r => {
+        if (!r.ok) { const b = await r.json(); alert(b.detail); }
+        this.refreshGames();
+      });
+    },
+    endGame(id) {
+      if (!confirm('End this game? This tears down every active instance for its boxes.')) return;
+      fetch(`/api/admin/games/${id}/end`, { method: 'POST' }).then(() => { this.refreshGames(); this.refreshInstances(); });
+    },
+    createChallenge() {
+      fetch(`/api/admin/games/${this.selectedGameId}/challenges`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(this.newChallenge),
+      }).then(async r => {
+        if (!r.ok) { const b = await r.json(); alert(b.detail); return; }
+        this.newChallenge = { box_id: '', flag_number: 1, title: '', points: 100, description: '' };
+        this.selectGame(this.selectedGameId);
+      });
+    },
+    toggleDisabled(team) {
+      fetch(`/api/admin/teams/${team.id}/disabled`, {
+        method: 'PATCH', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ disabled: !team.disabled }),
+      }).then(() => this.refreshTeams());
+    },
+    resetPassword(team) {
+      const pw = prompt(`New password for ${team.name} (min 8 chars):`);
+      if (!pw) return;
+      fetch(`/api/admin/teams/${team.id}/reset-password`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ new_password: pw }),
+      }).then(async r => {
+        if (!r.ok) { const b = await r.json(); alert(b.detail); }
+      });
+    },
+    forceStop(instanceId) {
+      fetch(`/api/admin/instances/${instanceId}/force-stop`, { method: 'POST' }).then(() => this.refreshInstances());
+    },
+  };
+}
+</script>
+<div x-data="adminApp()">
+  <h1>Admin dashboard</h1>
+
+  <section>
+    <h2>Games</h2>
+    <form @submit.prevent="createGame()">
+      <input type="text" x-model="newGameName" placeholder="New game name">
+      <button type="submit">Create game</button>
+    </form>
+    <table>
+      <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="g in games" :key="g.id">
+          <tr :class="{ selected: g.id === selectedGameId }">
+            <td><a href="#" @click.prevent="selectGame(g.id)" x-text="g.name"></a></td>
+            <td><span class="status-badge" x-text="g.status"></span></td>
+            <td>
+              <template x-if="g.status === 'draft'"><button @click="startGame(g.id)">Start</button></template>
+              <template x-if="g.status === 'running'"><button @click="endGame(g.id)">End</button></template>
+              <a :href="`/api/admin/games/${g.id}/export/results.csv`">CSV</a>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  <section x-show="selectedGameId !== null">
+    <h2>Challenges <span x-show="selectedGameId">(game #<span x-text="selectedGameId"></span>)</span></h2>
+    <form @submit.prevent="createChallenge()">
+      <label>Box
+        <select x-model="newChallenge.box_id" required>
+          <option value="" disabled>Select a box</option>
+          {% for box_id, display_name in box_tiers %}
+          <option value="{{ box_id }}">{{ display_name }} ({{ box_id }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Flag number
+        <select x-model.number="newChallenge.flag_number">
+          {% for n in range(1, 11) %}
+          <option value="{{ n }}">{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Title <input type="text" x-model="newChallenge.title" required></label>
+      <label>Points <input type="number" x-model.number="newChallenge.points" min="1" required></label>
+      <label>Description <input type="text" x-model="newChallenge.description"></label>
+      <button type="submit">Add challenge</button>
+    </form>
+    <table>
+      <thead><tr><th>Box</th><th>#</th><th>Title</th><th>Points</th></tr></thead>
+      <tbody>
+        <template x-for="c in challenges" :key="c.id">
+          <tr><td x-text="c.box_id"></td><td x-text="c.flag_number"></td><td x-text="c.title"></td><td x-text="c.points"></td></tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Teams</h2>
+    <table>
+      <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="t in teams" :key="t.id">
+          <tr>
+            <td x-text="t.name"></td>
+            <td x-text="t.disabled ? 'disabled' : 'active'"></td>
+            <td>
+              <button @click="toggleDisabled(t)" x-text="t.disabled ? 'Enable' : 'Disable'"></button>
+              <button @click="resetPassword(t)">Reset password</button>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Instances</h2>
+    <table>
+      <thead><tr><th>Team</th><th>Box</th><th>Status</th><th>Entry</th><th></th></tr></thead>
+      <tbody>
+        <template x-for="i in instances" :key="i.id">
+          <tr>
+            <td x-text="i.team_name"></td>
+            <td x-text="i.box_id"></td>
+            <td><span class="status-badge" x-text="i.status"></span></td>
+            <td><code x-show="i.status === 'running'" x-text="i.entry_host + ':' + i.entry_port"></code></td>
+            <td><button x-show="i.status !== 'destroyed'" @click="forceStop(i.id)">Force stop</button></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

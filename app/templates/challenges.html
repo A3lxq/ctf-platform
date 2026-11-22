@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Challenges{% endblock %}
+{% block content %}
+<script>
+function challengesApp() {
+  return {
+    challenges: [],
+    instances: {},
+    flagInputs: {},
+    feedback: {},
+    loading: true,
+    noGame: false,
+    now: Date.now(),
+    init() {
+      setInterval(() => { this.now = Date.now(); }, 1000);
+      this.refresh();
+    },
+    refresh() {
+      fetch('/api/player/challenges').then(r => {
+        if (r.status === 401) { window.location.href = '/login'; return Promise.reject(); }
+        return r.json();
+      }).then(challenges => {
+        this.challenges = challenges;
+        this.noGame = challenges.length === 0;
+        return fetch('/api/player/instances').then(r => r.json());
+      }).then(instances => {
+        this.instances = {};
+        for (const inst of instances) {
+          if (inst.status !== 'destroyed') this.instances[inst.box_id] = inst;
+        }
+        this.loading = false;
+      }).catch(() => {});
+    },
+    get groupedChallenges() {
+      const groups = {};
+      for (const c of this.challenges) {
+        if (!groups[c.box_id]) groups[c.box_id] = { box_id: c.box_id, challenges: [] };
+        groups[c.box_id].challenges.push(c);
+      }
+      return Object.values(groups).sort((a, b) => a.box_id.localeCompare(b.box_id));
+    },
+    countdown(expiresAt) {
+      const remaining = Math.max(0, new Date(expiresAt).getTime() - this.now);
+      if (remaining <= 0) return 'expired';
+      const m = Math.floor(remaining / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      return `expires in ${m}:${String(s).padStart(2, '0')}`;
+    },
+    start(boxId) {
+      fetch('/api/player/instances', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ box_id: boxId }),
+      }).then(async r => {
+        if (!r.ok) { const b = await r.json(); alert(b.detail || 'failed to start instance'); }
+        this.refresh();
+      });
+    },
+    renew(boxId) {
+      fetch(`/api/player/instances/${boxId}/renew`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ extra_minutes: 30 }),
+      }).then(async r => {
+        if (!r.ok) { const b = await r.json(); alert(b.detail || 'failed to renew'); }
+        this.refresh();
+      });
+    },
+    stop(boxId) {
+      fetch(`/api/player/instances/${boxId}`, { method: 'DELETE' }).then(() => this.refresh());
+    },
+    submitFlag(c) {
+      fetch('/api/player/submissions', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ challenge_id: c.id, value: this.flagInputs[c.id] || '' }),
+      }).then(async r => {
+        const body = await r.json().catch(() => ({}));
+        if (r.status === 409) this.feedback[c.id] = 'Already solved.';
+        else if (r.ok && body.correct) this.feedback[c.id] = 'Correct!';
+        else if (r.ok) this.feedback[c.id] = 'Incorrect, try again.';
+        else this.feedback[c.id] = body.detail || 'Submission failed.';
+        this.refresh();
+      });
+    },
+  };
+}
+</script>
+<div x-data="challengesApp()">
+  <h1>Challenges</h1>
+  <template x-if="loading"><p>Loading...</p></template>
+  <template x-if="!loading && noGame"><p>No game is currently running. Check back later.</p></template>
+  <template x-for="group in groupedChallenges" :key="group.box_id">
+    <section class="box-group">
+      <h2 x-text="group.box_id"></h2>
+      <div class="instance-panel">
+        <template x-if="instances[group.box_id]">
+          <div>
+            <span class="status-badge" x-text="instances[group.box_id].status"></span>
+            <template x-if="instances[group.box_id].status === 'running'">
+              <span>
+                <template x-for="p in (instances[group.box_id].ports && instances[group.box_id].ports.length ? instances[group.box_id].ports : [{host_port: instances[group.box_id].entry_port, protocol: 'tcp', container_port: '?'}])" :key="p.host_port">
+                  <code x-text="instances[group.box_id].entry_host + ':' + p.host_port + ' (' + p.protocol + ')'"></code>
+                </template>
+                <span class="countdown" x-text="countdown(instances[group.box_id].expires_at)"></span>
+                <button @click="renew(group.box_id)">+30m</button>
+                <button @click="stop(group.box_id)">Stop</button>
+              </span>
+            </template>
+            <template x-if="instances[group.box_id].status !== 'running'">
+              <button @click="start(group.box_id)">Retry start</button>
+            </template>
+          </div>
+        </template>
+        <template x-if="!instances[group.box_id]">
+          <button @click="start(group.box_id)">Start instance</button>
+        </template>
+      </div>
+      <ul class="challenge-list">
+        <template x-for="c in group.challenges" :key="c.id">
+          <li :class="{ solved: c.solved }">
+            <strong x-text="c.title"></strong> (<span x-text="c.points"></span> pts)
+            <p x-show="c.description" x-text="c.description" class="challenge-desc"></p>
+            <template x-if="!c.solved">
+              <form @submit.prevent="submitFlag(c)">
+                <input type="text" x-model="flagInputs[c.id]" placeholder="HLC{...}">
+                <button type="submit">Submit</button>
+              </form>
+            </template>
+            <template x-if="c.solved"><span class="solved-badge">Solved</span></template>
+            <p x-show="feedback[c.id]" x-text="feedback[c.id]" class="feedback"></p>
+          </li>
+        </template>
+      </ul>
+    </section>
+  </template>
+</div>
+{% endblock %}
