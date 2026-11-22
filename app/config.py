@@ -25,3 +25,10 @@ REGISTER_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("PLATFORM_REGISTER_RATE_
 PBKDF2_ITERATIONS = int(os.environ.get("PLATFORM_PBKDF2_ITERATIONS", "310000"))
 
 DEFAULT_INSTANCE_TTL_MINUTES = int(os.environ.get("PLATFORM_DEFAULT_INSTANCE_TTL_MINUTES", "120"))
+
+# How often the background sweep (reconciliation.py) re-syncs every
+# non-DESTROYED TeamInstance against the orchestrator's own authoritative
+# state -- catches an instance the orchestrator's own reaper destroyed
+# for expiring, independently of this platform ever being told. Same
+# role as the orchestrator's own REAPER_INTERVAL_SECONDS.
+RECONCILIATION_INTERVAL_SECONDS = int(os.environ.get("PLATFORM_RECONCILIATION_INTERVAL_SECONDS", "60"))

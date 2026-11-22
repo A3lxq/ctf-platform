@@ -97,6 +97,17 @@ class ChallengeResponse(BaseModel):
         from_attributes = True
 
 
+class ChallengeWithSolveResponse(BaseModel):
+    id: int
+    game_id: int
+    box_id: str
+    flag_number: int
+    title: str
+    points: int
+    description: str | None
+    solved: bool
+
+
 class SubmissionRequest(BaseModel):
     challenge_id: int
     value: str

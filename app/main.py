@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -5,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import config, security
-from .api import admin, auth
+from . import config, reconciliation, security
+from .api import admin, auth, player
 from .models import Admin, get_session, init_db
 from .web import routes as web_routes
 
@@ -37,12 +38,15 @@ def bootstrap_admin() -> None:
 async def lifespan(app: FastAPI):
     init_db()
     bootstrap_admin()
+    reconciliation_task = asyncio.create_task(reconciliation.run_forever())
     yield
+    reconciliation_task.cancel()
 
 
 app = FastAPI(title="ctf-platform", lifespan=lifespan)
 app.add_middleware(SessionMiddleware, secret_key=config.SESSION_SECRET, session_cookie=config.SESSION_COOKIE_NAME)
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(player.router)
 app.include_router(web_routes.router)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
