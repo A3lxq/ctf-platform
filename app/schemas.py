@@ -139,3 +139,25 @@ class StartInstanceRequest(BaseModel):
 
 class RenewInstanceRequest(BaseModel):
     extra_minutes: int
+
+
+class ScoreboardEntryResponse(BaseModel):
+    rank: int
+    team_id: int
+    team_name: str
+    score: int
+    last_solve_at: datetime | None
+
+
+class AdminInstanceResponse(BaseModel):
+    id: str
+    team_id: int
+    team_name: str
+    box_id: str
+    status: TeamInstanceStatus
+    entry_host: str | None
+    entry_port: int | None
+    ports: list | None
+    created_at: datetime
+    expires_at: datetime
+    last_synced_at: datetime

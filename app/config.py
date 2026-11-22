@@ -32,3 +32,8 @@ DEFAULT_INSTANCE_TTL_MINUTES = int(os.environ.get("PLATFORM_DEFAULT_INSTANCE_TTL
 # for expiring, independently of this platform ever being told. Same
 # role as the orchestrator's own REAPER_INTERVAL_SECONDS.
 RECONCILIATION_INTERVAL_SECONDS = int(os.environ.get("PLATFORM_RECONCILIATION_INTERVAL_SECONDS", "60"))
+
+# The admin instance dashboard (api/admin.py's list_instances) refreshes
+# a row from the orchestrator only if it's older than this -- avoids an
+# orchestrator round-trip per instance on every dashboard page load.
+INSTANCE_STALENESS_SECONDS = int(os.environ.get("PLATFORM_INSTANCE_STALENESS_SECONDS", "30"))

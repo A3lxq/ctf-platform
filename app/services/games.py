@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
+from . import instances as instances_service
 
 
 class GameServiceError(Exception):
@@ -33,15 +34,15 @@ def start_game(db: Session, game: models.Game) -> models.Game:
 
 
 def end_game(db: Session, game: models.Game) -> models.Game:
-    """Flips status to ENDED -- the complement start_game needs to exist
-    at all, since "at most one RUNNING game" is unusable without a way
-    to release it. The mass-teardown sweep (DELETE every still-running
-    TeamInstance tied to this game's challenges) is added in Phase C
-    once the orchestrator integration exists; this is deliberately just
-    the local status flip for now."""
+    """Flips status to ENDED, then sweeps up: DELETEs every
+    still-non-DESTROYED TeamInstance (any team) for a box_id this game
+    actually used, so nothing accumulates unbounded in the orchestrator
+    after the event -- see services/instances.py's mass_teardown_for_game."""
     game.status = models.GameStatus.ENDED
     if game.end_at is None:
         game.end_at = datetime.now(timezone.utc)
     db.commit()
+    db.refresh(game)
+    instances_service.mass_teardown_for_game(db, game)
     db.refresh(game)
     return game

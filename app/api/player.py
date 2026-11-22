@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from .. import boxes_catalog, models, schemas, security
 from ..services import games as games_service
 from ..services import instances as instances_service
+from ..services import scoreboard as scoreboard_service
 from ..services import submissions as submissions_service
 
 router = APIRouter(prefix="/api/player", tags=["player"])
@@ -39,6 +40,14 @@ def list_challenges(team: models.Team = Depends(security.current_team), db: Sess
         )
         for c in challenges
     ]
+
+
+@router.get("/scoreboard", response_model=list[schemas.ScoreboardEntryResponse])
+def scoreboard(team: models.Team = Depends(security.current_team), db: Session = Depends(security.get_db)):
+    game = games_service.get_running_game(db)
+    if game is None:
+        return []
+    return scoreboard_service.compute_scoreboard(db, game.id)
 
 
 @router.get("/instances", response_model=list[schemas.TeamInstanceResponse])
