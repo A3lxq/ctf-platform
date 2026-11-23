@@ -11,10 +11,20 @@ function adminApp() {
     challenges: [],
     newGameName: '',
     newChallenge: { box_id: '', flag_number: 1, title: '', points: 100, description: '' },
+    boxes: [],
+    advancedBoxMode: false,
+    newBox: { box_id: '', hostName: 'web', ports: '80', advancedSpec: '', file: null },
+    boxUploadError: '',
+    boxUploadBusy: false,
+    boxDisplayEdits: {},
+    eventSettings: { name: '', description: '' },
+    eventBannerFile: null,
     init() {
       this.refreshGames();
       this.refreshTeams();
       this.refreshInstances();
+      this.refreshBoxes();
+      this.refreshEventSettings();
     },
     refreshGames() {
       fetch('/api/admin/games').then(r => {
@@ -85,11 +95,107 @@ function adminApp() {
     forceStop(instanceId) {
       fetch(`/api/admin/instances/${instanceId}/force-stop`, { method: 'POST' }).then(() => this.refreshInstances());
     },
+    refreshBoxes() {
+      fetch('/api/admin/boxes').then(r => r.json()).then(boxes => { this.boxes = boxes; });
+    },
+    onBoxFileChange(e) {
+      this.newBox.file = e.target.files[0] || null;
+    },
+    uploadBox() {
+      this.boxUploadError = '';
+      let spec;
+      if (this.advancedBoxMode) {
+        try {
+          spec = JSON.parse(this.newBox.advancedSpec);
+        } catch (e) {
+          this.boxUploadError = 'invalid JSON: ' + e;
+          return;
+        }
+      } else {
+        if (!this.newBox.box_id || !this.newBox.hostName) {
+          this.boxUploadError = 'box ID and host name are required';
+          return;
+        }
+        const ports = this.newBox.ports.split(',').map(p => p.trim()).filter(Boolean)
+          .map(p => ({ container_port: parseInt(p, 10), protocol: 'tcp' }));
+        spec = { box_id: this.newBox.box_id, hosts: [{ name: this.newBox.hostName, front_door: true, ports }] };
+      }
+      if (!this.newBox.file) {
+        this.boxUploadError = 'choose a .tar/.tar.gz build context';
+        return;
+      }
+      const form = new FormData();
+      form.append('spec', JSON.stringify(spec));
+      form.append('context', this.newBox.file);
+      this.boxUploadBusy = true;
+      fetch('/api/admin/boxes', { method: 'POST', body: form }).then(async r => {
+        this.boxUploadBusy = false;
+        const body = await r.json().catch(() => ({}));
+        if (!r.ok) { this.boxUploadError = body.detail || 'upload failed'; return; }
+        this.newBox = { box_id: '', hostName: 'web', ports: '80', advancedSpec: '', file: null };
+        this.refreshBoxes();
+      });
+    },
+    toggleBoxDisplayEdit(boxId) {
+      if (!this.boxDisplayEdits[boxId]) {
+        fetch(`/api/admin/boxes/${boxId}/display`).then(r => r.json()).then(d => {
+          this.boxDisplayEdits[boxId] = {
+            display_name: d.display_name, description: d.description || '', bannerFile: null, open: true,
+          };
+        });
+      } else {
+        this.boxDisplayEdits[boxId].open = !this.boxDisplayEdits[boxId].open;
+      }
+    },
+    onBoxBannerFileChange(boxId, e) {
+      this.boxDisplayEdits[boxId].bannerFile = e.target.files[0] || null;
+    },
+    saveBoxDisplay(boxId) {
+      const edit = this.boxDisplayEdits[boxId];
+      fetch(`/api/admin/boxes/${boxId}/display`, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ display_name: edit.display_name, description: edit.description }),
+      }).then(() => {
+        if (!edit.bannerFile) return null;
+        const form = new FormData();
+        form.append('image', edit.bannerFile);
+        return fetch(`/api/admin/boxes/${boxId}/banner`, { method: 'POST', body: form });
+      }).then(() => { edit.open = false; });
+    },
+    refreshEventSettings() {
+      fetch('/api/admin/settings').then(r => r.json()).then(s => {
+        this.eventSettings = { name: s.name, description: s.description || '' };
+      });
+    },
+    onEventBannerFileChange(e) {
+      this.eventBannerFile = e.target.files[0] || null;
+    },
+    saveEventSettings() {
+      fetch('/api/admin/settings', {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(this.eventSettings),
+      }).then(() => {
+        if (!this.eventBannerFile) return null;
+        const form = new FormData();
+        form.append('image', this.eventBannerFile);
+        return fetch('/api/admin/settings/banner', { method: 'POST', body: form });
+      }).then(() => { this.eventBannerFile = null; });
+    },
   };
 }
 </script>
 <div x-data="adminApp()">
   <h1>Admin dashboard</h1>
+
+  <section>
+    <h2>Event settings</h2>
+    <form @submit.prevent="saveEventSettings()">
+      <label>Event name <input type="text" x-model="eventSettings.name"></label>
+      <label>Description <input type="text" x-model="eventSettings.description"></label>
+      <label>Banner image <input type="file" accept=".png,.jpg,.jpeg,.webp" @change="onEventBannerFileChange"></label>
+      <button type="submit">Save</button>
+    </form>
+  </section>
 
   <section>
     <h2>Games</h2>
@@ -183,6 +289,76 @@ function adminApp() {
         </template>
       </tbody>
     </table>
+  </section>
+
+  <section>
+    <h2>Boxes</h2>
+    <table>
+      <thead><tr><th>Box ID</th><th>Multi-host</th><th>Front-door ports</th><th>Display</th></tr></thead>
+      <tbody>
+        <template x-for="b in boxes" :key="b.box_id">
+          <tr>
+            <td x-text="b.box_id"></td>
+            <td x-text="b.is_multi_host ? 'yes' : 'no'"></td>
+            <td>
+              <template x-for="h in b.hosts.filter(h => h.front_door)" :key="h.name">
+                <template x-for="p in h.ports" :key="p.container_port">
+                  <code x-text="p.container_port + '/' + p.protocol"></code>
+                </template>
+              </template>
+            </td>
+            <td>
+              <button @click="toggleBoxDisplayEdit(b.box_id)">Edit display</button>
+              <template x-if="boxDisplayEdits[b.box_id] && boxDisplayEdits[b.box_id].open">
+                <div>
+                  <label>Display name <input type="text" x-model="boxDisplayEdits[b.box_id].display_name"></label>
+                  <label>Description <input type="text" x-model="boxDisplayEdits[b.box_id].description"></label>
+                  <label>Banner image <input type="file" accept=".png,.jpg,.jpeg,.webp" @change="onBoxBannerFileChange(b.box_id, $event)"></label>
+                  <button @click="saveBoxDisplay(b.box_id)">Save</button>
+                </div>
+              </template>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+
+    <h3>Upload a custom box</h3>
+    <p class="challenge-desc">
+      The box's own image must implement the same flag scheme every other box
+      uses: HMAC-SHA256(CTF_SECRET, "&lt;box_id&gt;:&lt;flag_number&gt;")[:10],
+      wrapped in HLC{...}. Uploading only builds and registers the box --
+      add challenges for it under Games above once it's listed.
+      This triggers a real `docker build` on the orchestrator host using
+      credentials that already control every team's data, so treat admin
+      access with the same care as host access.
+    </p>
+    <form @submit.prevent="uploadBox()">
+      <label>Box ID
+        <input type="text" x-model="newBox.box_id" placeholder="my-custom-box"
+               pattern="[a-z0-9][a-z0-9-]{1,61}[a-z0-9]" required x-show="!advancedBoxMode">
+      </label>
+      <label>
+        <input type="checkbox" x-model="advancedBoxMode"> Advanced (multi-host JSON spec)
+      </label>
+      <template x-if="!advancedBoxMode">
+        <div>
+          <label>Host name <input type="text" x-model="newBox.hostName" placeholder="web"></label>
+          <label>Ports (comma-separated container ports) <input type="text" x-model="newBox.ports" placeholder="80"></label>
+        </div>
+      </template>
+      <template x-if="advancedBoxMode">
+        <label>Spec JSON
+          <textarea x-model="newBox.advancedSpec" rows="6"
+                    placeholder='{"box_id": "my-box", "hosts": [{"name": "web", "front_door": true, "ports": [{"container_port": 80}]}]}'></textarea>
+        </label>
+      </template>
+      <label>Build context (.tar/.tar.gz -- docker/Dockerfile, or docker/&lt;host-name&gt;/Dockerfile per host for multi-host)
+        <input type="file" @change="onBoxFileChange" accept=".tar,.tar.gz,.tgz" required>
+      </label>
+      <button type="submit" :disabled="boxUploadBusy" x-text="boxUploadBusy ? 'Building...' : 'Upload and build'"></button>
+      <p x-show="boxUploadError" x-text="boxUploadError" class="error"></p>
+    </form>
   </section>
 </div>
 {% endblock %}

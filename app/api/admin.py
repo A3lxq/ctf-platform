@@ -1,17 +1,18 @@
 import csv
 import io
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import config, models, schemas, security
+from .. import config, models, orchestrator_client, schemas, security
 from ..services import challenges as challenges_service
 from ..services import games as games_service
 from ..services import instances as instances_service
 from ..services import scoreboard as scoreboard_service
+from ..services import settings as settings_service
 from ..services import teams as teams_service
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -195,3 +196,106 @@ def force_stop_instance(
         expires_at=row.expires_at,
         last_synced_at=row.last_synced_at,
     )
+
+
+@router.get("/boxes")
+def list_boxes(admin: models.Admin = Depends(security.current_admin)):
+    """Pure passthrough to the orchestrator's own GET /boxes -- the full
+    catalog, built-in + any custom uploads, in one list."""
+    try:
+        return orchestrator_client.list_boxes()
+    except orchestrator_client.OrchestratorError as e:
+        raise HTTPException(status_code=502, detail=f"orchestrator error: {e.detail}") from e
+
+
+@router.post("/boxes")
+async def upload_box(
+    spec: str = Form(...),
+    context: UploadFile = File(...),
+    admin: models.Admin = Depends(security.current_admin),
+):
+    """Forwards the admin's upload straight to the orchestrator's own
+    POST /boxes (see that repo's orchestrator/boxes/upload.py for the
+    actual validate/extract/build/register pipeline and its security
+    framing) -- this platform does no box-building itself, it has no
+    Docker access at all by design."""
+    tarball = await context.read()
+    try:
+        return orchestrator_client.upload_box(spec, tarball)
+    except orchestrator_client.OrchestratorError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail) from e
+
+
+def _event_settings_response(row: models.EventSettings) -> schemas.EventSettingsResponse:
+    return schemas.EventSettingsResponse(
+        name=row.name, description=row.description, banner_url=settings_service.banner_url(row.banner_path)
+    )
+
+
+@router.get("/settings", response_model=schemas.EventSettingsResponse)
+def get_settings(admin: models.Admin = Depends(security.current_admin), db: Session = Depends(security.get_db)):
+    return _event_settings_response(settings_service.get_event_settings(db))
+
+
+@router.put("/settings", response_model=schemas.EventSettingsResponse)
+def update_settings(
+    req: schemas.EventSettingsUpdateRequest,
+    admin: models.Admin = Depends(security.current_admin),
+    db: Session = Depends(security.get_db),
+):
+    return _event_settings_response(settings_service.update_event_settings(db, req.name, req.description))
+
+
+@router.post("/settings/banner", response_model=schemas.EventSettingsResponse)
+async def upload_event_banner(
+    image: UploadFile = File(...),
+    admin: models.Admin = Depends(security.current_admin),
+    db: Session = Depends(security.get_db),
+):
+    data = await image.read()
+    try:
+        row = settings_service.set_event_banner(db, image.content_type, data)
+    except settings_service.SettingsServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail) from e
+    return _event_settings_response(row)
+
+
+def _box_display_response(data: dict) -> schemas.BoxDisplayResponse:
+    return schemas.BoxDisplayResponse(
+        box_id=data["box_id"],
+        display_name=data["display_name"],
+        description=data["description"],
+        banner_url=settings_service.banner_url(data["banner_path"]),
+    )
+
+
+@router.get("/boxes/{box_id}/display", response_model=schemas.BoxDisplayResponse)
+def get_box_display(
+    box_id: str, admin: models.Admin = Depends(security.current_admin), db: Session = Depends(security.get_db)
+):
+    return _box_display_response(settings_service.get_box_display(db, box_id))
+
+
+@router.put("/boxes/{box_id}/display", response_model=schemas.BoxDisplayResponse)
+def update_box_display(
+    box_id: str,
+    req: schemas.BoxDisplayUpdateRequest,
+    admin: models.Admin = Depends(security.current_admin),
+    db: Session = Depends(security.get_db),
+):
+    return _box_display_response(settings_service.update_box_display(db, box_id, req.display_name, req.description))
+
+
+@router.post("/boxes/{box_id}/banner", response_model=schemas.BoxDisplayResponse)
+async def upload_box_banner(
+    box_id: str,
+    image: UploadFile = File(...),
+    admin: models.Admin = Depends(security.current_admin),
+    db: Session = Depends(security.get_db),
+):
+    data = await image.read()
+    try:
+        result = settings_service.set_box_banner(db, box_id, image.content_type, data)
+    except settings_service.SettingsServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail) from e
+    return _box_display_response(result)

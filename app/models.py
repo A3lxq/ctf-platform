@@ -167,6 +167,41 @@ class TeamInstance(Base):
     team: Mapped[Team] = relationship(back_populates="instances")
 
 
+class EventSettings(Base):
+    """Singleton row (always id=1) -- the site-wide name/description/
+    banner shown on every page. Admin never has to touch this for the
+    platform to keep working exactly as before Phase G: name defaults
+    to today's hardcoded value, description/banner_path default to
+    None (base.html/index.html simply don't render what isn't set)."""
+
+    __tablename__ = "event_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    name: Mapped[str] = mapped_column(String(128), default="Halcyon Protocol")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Relative to /static/uploads/ -- served through the existing
+    # StaticFiles mount, never through a DB blob.
+    banner_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class BoxDisplay(Base):
+    """Per-box display override (name/description/banner) -- PK is
+    box_id itself, no FK to anything cross-service, same reasoning
+    Challenge.box_id already uses (the orchestrator owns the real box
+    catalog; this platform only overlays presentation on top of it).
+    Falls back to boxes_catalog.py's static display_name (the 8
+    built-ins) or the raw box_id (a freshly-uploaded custom box with no
+    admin edit yet) wherever a row/field is missing -- see
+    services/settings.py."""
+
+    __tablename__ = "box_display"
+
+    box_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    display_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    banner_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
 _engine = create_engine(config.DATABASE_URL, connect_args={"check_same_thread": False} if config.DATABASE_URL.startswith("sqlite") else {})
 SessionLocal = sessionmaker(bind=_engine, autoflush=False, expire_on_commit=False)
 

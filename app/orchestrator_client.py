@@ -79,3 +79,27 @@ def destroy_instance(instance_id: str) -> None:
         if resp.status_code == 404:
             return
         _raise_for_error(resp)
+
+
+def list_boxes() -> list[dict]:
+    with _client() as client:
+        resp = client.get("/boxes")
+        _raise_for_error(resp)
+        return resp.json()
+
+
+def upload_box(spec_json: str, tarball: bytes) -> dict:
+    """Admin-only custom box upload -- a real `docker build` on the
+    orchestrator host, can take a while, hence the longer timeout than
+    every other call in this module. `spec_json` is forwarded as-is
+    (already a JSON string from the admin's own form submission) -- the
+    orchestrator's own UploadBoxSpec does all the real validation, no
+    need to parse/re-serialize it here too."""
+    with httpx.Client(base_url=config.ORCHESTRATOR_URL, headers=_headers(), timeout=300.0) as client:
+        resp = client.post(
+            "/boxes",
+            data={"spec": spec_json},
+            files={"context": ("context.tar", tarball, "application/x-tar")},
+        )
+        _raise_for_error(resp)
+        return resp.json()

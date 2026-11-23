@@ -37,3 +37,10 @@ RECONCILIATION_INTERVAL_SECONDS = int(os.environ.get("PLATFORM_RECONCILIATION_IN
 # a row from the orchestrator only if it's older than this -- avoids an
 # orchestrator round-trip per instance on every dashboard page load.
 INSTANCE_STALENESS_SECONDS = int(os.environ.get("PLATFORM_INSTANCE_STALENESS_SECONDS", "30"))
+
+# Where uploaded banner/icon images (event + per-box) are saved --
+# relative to the working directory, matching main.py's own
+# StaticFiles(directory="app/static") convention (both assume the app
+# is run from the repo root, same as every uvicorn command in SETUP.md).
+UPLOADS_DIR = os.environ.get("PLATFORM_UPLOADS_DIR", "app/static/uploads")
+UPLOADS_URL_PREFIX = "/static/uploads"

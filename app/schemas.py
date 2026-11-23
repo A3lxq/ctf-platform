@@ -149,6 +149,29 @@ class ScoreboardEntryResponse(BaseModel):
     last_solve_at: datetime | None
 
 
+class EventSettingsResponse(BaseModel):
+    name: str
+    description: str | None
+    banner_url: str | None
+
+
+class EventSettingsUpdateRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class BoxDisplayResponse(BaseModel):
+    box_id: str
+    display_name: str
+    description: str | None
+    banner_url: str | None
+
+
+class BoxDisplayUpdateRequest(BaseModel):
+    display_name: str | None = None
+    description: str | None = None
+
+
 class AdminInstanceResponse(BaseModel):
     id: str
     team_id: int

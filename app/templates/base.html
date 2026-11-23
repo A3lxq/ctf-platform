@@ -10,17 +10,20 @@
 </head>
 <body>
   <header
-    x-data="{ role: null, name: null,
+    x-data="{ role: null, name: null, eventName: 'Halcyon Protocol',
       logout() {
         fetch('/api/auth/logout', { method: 'POST' }).then(() => window.location.href = '/');
       }
     }"
-    x-init="fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => {
-      if (me) { role = me.role; name = me.name || me.username; }
-    })"
+    x-init="
+      fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => {
+        if (me) { role = me.role; name = me.name || me.username; }
+      });
+      fetch('/api/settings').then(r => r.json()).then(s => { eventName = s.name; });
+    "
   >
     <nav>
-      <a href="/" class="brand">Halcyon Protocol</a>
+      <a href="/" class="brand" x-text="eventName"></a>
       <span class="nav-links">
         <template x-if="role === 'team'">
           <span>

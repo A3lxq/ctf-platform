@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import config, reconciliation, security
-from .api import admin, auth, player
+from .api import admin, auth, player, public
 from .models import Admin, get_session, init_db
 from .web import routes as web_routes
 
@@ -48,5 +48,6 @@ app.add_middleware(SessionMiddleware, secret_key=config.SESSION_SECRET, session_
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(player.router)
+app.include_router(public.router)
 app.include_router(web_routes.router)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Halcyon Protocol{% endblock %}
 {% block content %}
-<h1>Halcyon Protocol</h1>
-<p>A capture-the-flag event across 8 boxes, noob to legendary. Anyone can
-play -- register a team (solo is fine) and jump in.</p>
 <div
-  x-data="{ role: null }"
-  x-init="fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => { role = me ? me.role : null })"
+  x-data="{ role: null, eventName: 'Halcyon Protocol', eventDescription: '', bannerUrl: null }"
+  x-init="
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => { role = me ? me.role : null });
+    fetch('/api/settings').then(r => r.json()).then(s => {
+      eventName = s.name; eventDescription = s.description; bannerUrl = s.banner_url;
+    });
+  "
 >
+  <img x-show="bannerUrl" :src="bannerUrl" class="event-banner" alt="">
+  <h1 x-text="eventName"></h1>
+  <p x-show="eventDescription" x-text="eventDescription"></p>
+  <p x-show="!eventDescription">A capture-the-flag event across 8 boxes, noob to
+    legendary. Anyone can play -- register a team (solo is fine) and jump in.</p>
   <template x-if="role === 'team'">
     <p><a href="/challenges" class="button">Go to challenges</a></p>
   </template>

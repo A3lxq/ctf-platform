@@ -6,6 +6,7 @@ function challengesApp() {
   return {
     challenges: [],
     instances: {},
+    boxDisplay: {},
     flagInputs: {},
     feedback: {},
     loading: true,
@@ -22,6 +23,7 @@ function challengesApp() {
       }).then(challenges => {
         this.challenges = challenges;
         this.noGame = challenges.length === 0;
+        this.refreshBoxDisplay();
         return fetch('/api/player/instances').then(r => r.json());
       }).then(instances => {
         this.instances = {};
@@ -30,6 +32,17 @@ function challengesApp() {
         }
         this.loading = false;
       }).catch(() => {});
+    },
+    refreshBoxDisplay() {
+      const boxIds = [...new Set(this.challenges.map(c => c.box_id))];
+      Promise.all(boxIds.map(id =>
+        fetch(`/api/boxes-display/${id}`).then(r => r.ok ? r.json() : null)
+      )).then(results => {
+        for (const r of results) if (r) this.boxDisplay[r.box_id] = r;
+      });
+    },
+    boxTitle(boxId) {
+      return (this.boxDisplay[boxId] && this.boxDisplay[boxId].display_name) || boxId;
     },
     get groupedChallenges() {
       const groups = {};
@@ -89,7 +102,11 @@ function challengesApp() {
   <template x-if="!loading && noGame"><p>No game is currently running. Check back later.</p></template>
   <template x-for="group in groupedChallenges" :key="group.box_id">
     <section class="box-group">
-      <h2 x-text="group.box_id"></h2>
+      <img x-show="boxDisplay[group.box_id] && boxDisplay[group.box_id].banner_url"
+           :src="boxDisplay[group.box_id] && boxDisplay[group.box_id].banner_url" class="box-banner" alt="">
+      <h2 x-text="boxTitle(group.box_id)"></h2>
+      <p class="challenge-desc" x-show="boxDisplay[group.box_id] && boxDisplay[group.box_id].description"
+         x-text="boxDisplay[group.box_id] && boxDisplay[group.box_id].description"></p>
       <div class="instance-panel">
         <template x-if="instances[group.box_id]">
           <div>
