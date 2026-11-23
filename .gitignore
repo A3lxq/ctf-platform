@@ -4,3 +4,8 @@ __pycache__/
 .pytest_cache/
 platform.db
 *.db
+.env
+.quickstart-secrets
+.quickstart.pids
+app/static/uploads/*
+!app/static/uploads/.gitkeep

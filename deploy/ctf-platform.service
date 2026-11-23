@@ -1,0 +1,21 @@
+# Template systemd unit for running ctf-platform natively (not
+# containerized) as a persistent service. See ../SETUP.md for install
+# steps. Replace <USER> and the paths below with your real values.
+# Pair with ctf-orchestrator's own deploy/ctf-orchestrator.service.
+[Unit]
+Description=ctf-platform
+After=network.target ctf-orchestrator.service
+Requires=ctf-orchestrator.service
+
+[Service]
+Type=simple
+User=<USER>
+Group=<USER>
+WorkingDirectory=/home/<USER>/ctf-platform
+EnvironmentFile=/home/<USER>/ctf-platform/deploy.env
+ExecStart=/home/<USER>/ctf-platform/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 9200
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

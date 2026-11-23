@@ -1,0 +1,72 @@
+services:
+  orchestrator:
+    # Built directly from the sibling repo's own git history -- a user
+    # only ever clones ctf-platform, never needs to separately clone or
+    # even know about ctf-orchestrator.
+    build: https://github.com/A3lxq/CTF-orchestrator.git#master
+    # `network_mode: host`, not the default bridge network -- NOT
+    # optional. Discovered by actually provisioning an instance through
+    # this compose file, not assumed: the orchestrator's own readiness
+    # probe connects to ORCHESTRATOR_PUBLIC_ADDRESS (127.0.0.1 for a
+    # single-machine setup) to confirm each box instance actually
+    # answers before reporting it ready. On the default bridge network,
+    # that container's own "127.0.0.1" is itself, NOT the real host --
+    # the box containers it just created (siblings on the real host
+    # daemon, via the socket below) are unreachable at that address from
+    # in here, so every single provision request fails its own readiness
+    # check and 500s. Host networking makes this container's network
+    # stack identical to the real host's, matching the native (non-
+    # containerized) deployment's behavior exactly, where this same code
+    # already runs directly on the host. Linux-only -- Docker Desktop
+    # (Mac/Windows) doesn't support true host networking the same way.
+    network_mode: host
+    environment:
+      # MUST be this host's real reachable address, not left at its
+      # 127.0.0.1 default -- otherwise every player's browser tries to
+      # reach box instances at THEIR OWN localhost, silently breaking
+      # every box connection. start-compose.sh tries to detect this for
+      # you; override it here (or in .env) if it gets it wrong.
+      ORCHESTRATOR_PUBLIC_ADDRESS: ${PUBLIC_ADDRESS:-127.0.0.1}
+      ORCHESTRATOR_AUTH_TOKEN: ${ORCHESTRATOR_AUTH_TOKEN:?set in .env -- see .env.example}
+      ORCHESTRATOR_DATABASE_URL: sqlite:////app/data/orchestrator.db
+      ORCHESTRATOR_MAX_INSTANCES_PER_TEAM: ${ORCHESTRATOR_MAX_INSTANCES_PER_TEAM:-4}
+    volumes:
+      # The real host Docker daemon's socket -- NOT a nested daemon.
+      # Every container the orchestrator creates (box instances,
+      # Legendary's nested dind daemons) lands on the real host, fully
+      # visible to `docker ps` outside this compose stack too. This is
+      # effectively root-equivalent host access, the same trade-off any
+      # docker-in-docker CI runner already accepts -- see
+      # ctf-platform/SETUP.md for the full reasoning, not hidden here.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - orchestrator_data:/app/data
+    restart: unless-stopped
+
+  platform:
+    build: .
+    # Same host-networking reasoning as `orchestrator` above, and it
+    # also sidesteps a real consequence of `orchestrator` being
+    # host-networked: a host-networked service isn't on this stack's own
+    # bridge network at all, so the usual `http://orchestrator:9100`
+    # compose-DNS name wouldn't resolve. Both services sharing the host
+    # network makes `http://127.0.0.1:9100` just work -- the same URL
+    # the native deployment already uses between the two.
+    network_mode: host
+    environment:
+      PLATFORM_ORCHESTRATOR_URL: http://127.0.0.1:9100
+      PLATFORM_ORCHESTRATOR_AUTH_TOKEN: ${ORCHESTRATOR_AUTH_TOKEN:?set in .env -- see .env.example}
+      PLATFORM_DATABASE_URL: sqlite:////app/data/platform.db
+      PLATFORM_ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      PLATFORM_ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set in .env -- see .env.example}
+      PLATFORM_SESSION_SECRET: ${SESSION_SECRET:?set in .env -- see .env.example}
+    volumes:
+      - platform_data:/app/data
+      - platform_uploads:/app/app/static/uploads
+    depends_on:
+      - orchestrator
+    restart: unless-stopped
+
+volumes:
+  orchestrator_data:
+  platform_data:
+  platform_uploads:
