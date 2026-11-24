@@ -1,4 +1,4 @@
-"""Static catalog of the 8 box_ids ctf-orchestrator knows how to host --
+"""Static catalog of the box_ids ctf-orchestrator knows how to host --
 mirrors orchestrator/boxes/registry.py + specs/*.yaml. Hardcoded here for
 Phase A; once the orchestrator's Phase-B GET /boxes patch lands, this
 becomes a fallback/cache rather than the only source, but validation
@@ -54,9 +54,19 @@ BOXES: dict[str, BoxCatalogEntry] = {
         "legendary-ferrymans-relay", "Ferryman's Relay", "legendary",
         ((5000, "http"), (22, "ssh")), 10,
     ),
+    # A crossover from a different fictional universe (Synnefo Academy,
+    # not Halcyon Protocol) -- doesn't try to occupy a rung on the
+    # 8-tier ladder above, hence its own "bonus" tier. Only 5 scoring
+    # flags, not 10 -- it genuinely has 5 decoys alongside them, never
+    # derived/scored, same category as every other box's own static
+    # decoy files (Noob already ships a flag_fake.txt).
+    "bonus-forgotten-administrator": BoxCatalogEntry(
+        "bonus-forgotten-administrator", "The Forgotten Administrator", "bonus",
+        ((5000, "http"), (22, "ssh")), 5,
+    ),
 }
 
-TIER_ORDER = ["noob", "beginner", "intermediate", "veteran", "master", "expert", "god", "legendary"]
+TIER_ORDER = ["noob", "beginner", "intermediate", "veteran", "master", "expert", "god", "legendary", "bonus"]
 
 
 def is_known_box_id(box_id: str) -> bool:
