@@ -76,9 +76,36 @@ BOXES: dict[str, BoxCatalogEntry] = {
         "bonus-apex-cyber-defense", "Apex Cyber Defense", "bonus",
         ((80, "http"), (21, "ftp"), (2222, "ssh")), 4,
     ),
+    # First box of "Domain Zero Directory" -- a new 8-tier game (separate
+    # from the Halcyon Protocol ladder above), a classic on-prem
+    # corporate red-team engagement against the fictional "Meridian
+    # Systems". Noob tier: SMB share enumeration, a leaked config-backup
+    # credential, SSH foothold via password reuse, sudo/GTFOBins ('less')
+    # privesc. 10 real flags, matching the Halcyon boxes' own convention.
+    "domainzero-noob-reception": BoxCatalogEntry(
+        "domainzero-noob-reception", "Reception", "noob",
+        ((22, "ssh"), (445, "smb"), (139, "smb")), 10,
+    ),
+    # First box of "Cloudbreak Pipeline" -- the second new 8-tier game, a
+    # cloud-native/DevOps-flavored engagement against the fictional
+    # "Nimbus Freight" logistics startup. Noob tier: object-storage
+    # bucket enumeration, a leaked cloud storage credential, SSH foothold
+    # via password reuse, sudo/GTFOBins ('tar') privesc. Deliberately
+    # distinct mechanics from domainzero-noob-reception above despite
+    # being the same tier in a sibling game.
+    "cloudbreak-noob-bucket": BoxCatalogEntry(
+        "cloudbreak-noob-bucket", "Bucket", "noob",
+        ((22, "ssh"), (9000, "http")), 10,
+    ),
 }
 
-TIER_ORDER = ["noob", "beginner", "intermediate", "veteran", "master", "expert", "god", "legendary", "bonus"]
+# God is each game's final/hardest capstone, Legendary one step below it
+# -- confirmed explicitly by the user, not the order the original 8
+# Halcyon boxes happened to be *built* in. Swapped from the original
+# ["...", "god", "legendary", ...] (which predates that confirmation) so
+# every game's display order is consistent, including Halcyon Protocol's
+# own existing legendary-ferrymans-relay/god-the-ferryman pair.
+TIER_ORDER = ["noob", "beginner", "intermediate", "veteran", "master", "expert", "legendary", "god", "bonus"]
 
 
 def is_known_box_id(box_id: str) -> bool:
