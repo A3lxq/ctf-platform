@@ -64,6 +64,18 @@ BOXES: dict[str, BoxCatalogEntry] = {
         "bonus-forgotten-administrator", "The Forgotten Administrator", "bonus",
         ((5000, "http"), (22, "ssh")), 5,
     ),
+    # A second crossover, from yet another standalone universe/scenario
+    # (a corporate "Apex Cyber Defense" pentesting exam) -- rated
+    # Beginner-equivalent, but still filed under "bonus" rather than
+    # colliding with the existing "beginner" rung already occupied by
+    # beginner-reading-room. 4 scoring flags: web recon, SSH user shell,
+    # a third flag also surfaced over FTP (on the source OVA this
+    # duplicated the root flag verbatim -- rebuilt here as a genuinely
+    # distinct 4th-flag box instead), and root compromise.
+    "bonus-apex-cyber-defense": BoxCatalogEntry(
+        "bonus-apex-cyber-defense", "Apex Cyber Defense", "bonus",
+        ((80, "http"), (21, "ftp"), (2222, "ssh")), 4,
+    ),
 }
 
 TIER_ORDER = ["noob", "beginner", "intermediate", "veteran", "master", "expert", "god", "legendary", "bonus"]
