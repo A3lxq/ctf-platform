@@ -144,6 +144,16 @@ BOXES: dict[str, BoxCatalogEntry] = {
         "cloudbreak-veteran-layers", "Layers", "veteran",
         ((5000, "http"), (22, "ssh")), 10,
     ),
+    # Master tier of Cloudbreak Pipeline: a real HTTP request-smuggling
+    # (CL.TE) desync against a hand-rolled front proxy reaches an
+    # internal-only admin API. The front proxy also doubles as a
+    # published SSH bastion (port 2222) relaying straight through to
+    # the internal host, so the box stays completable end-to-end over
+    # its own published ports alone.
+    "cloudbreak-master-frontdoor": BoxCatalogEntry(
+        "cloudbreak-master-frontdoor", "Front Door", "master",
+        ((80, "http"), (2222, "ssh")), 10,
+    ),
 }
 
 # God is each game's final/hardest capstone, Legendary one step below it
