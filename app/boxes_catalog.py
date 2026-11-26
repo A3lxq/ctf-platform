@@ -114,6 +114,17 @@ BOXES: dict[str, BoxCatalogEntry] = {
         "cloudbreak-beginner-gitleak", "Gitleak", "beginner",
         ((22, "ssh"), (80, "http")), 10,
     ),
+    # Intermediate tier of Domain Zero Directory: a real Samba AD DC.
+    # Password spraying the usernames leaked by Noob's SMB share finds
+    # the foothold (AS-REP Roasting was dropped after a spike confirmed
+    # Samba's KDC always enforces pre-auth); the authenticated LDAPS
+    # bind then reads Administrator's own description attribute (a
+    # default AD ACL) for the remaining flags.
+    "domainzero-intermediate-domainedge": BoxCatalogEntry(
+        "domainzero-intermediate-domainedge", "Domain Edge", "intermediate",
+        ((445, "smb"), (139, "smb"), (389, "ldap"), (636, "ldaps"), (88, "kerberos"),
+         (464, "kpasswd"), (53, "dns"), (135, "rpc"), (3268, "gc"), (3269, "gc-ssl")), 10,
+    ),
 }
 
 # God is each game's final/hardest capstone, Legendary one step below it
