@@ -125,6 +125,25 @@ BOXES: dict[str, BoxCatalogEntry] = {
         ((445, "smb"), (139, "smb"), (389, "ldap"), (636, "ldaps"), (88, "kerberos"),
          (464, "kpasswd"), (53, "dns"), (135, "rpc"), (3268, "gc"), (3269, "gc-ssl")), 10,
     ),
+    # Intermediate tier of Cloudbreak Pipeline: a real SSRF vulnerability
+    # pivoted to a fake cloud instance metadata service (IMDS) to steal
+    # temporary credentials, then a fake Secrets Manager to recover an
+    # SSH credential. Distinct objective from intermediate-portside's
+    # own SSRF (which targets an internal diagnostics API, not cloud
+    # credentials).
+    "cloudbreak-intermediate-metadata": BoxCatalogEntry(
+        "cloudbreak-intermediate-metadata", "Metadata", "intermediate",
+        ((5000, "http"), (22, "ssh")), 10,
+    ),
+    # Veteran tier of Cloudbreak Pipeline: Docker image layer
+    # archaeology. A secret added in an early build layer, then
+    # "deleted" in a later layer via a real OCI/OverlayFS whiteout
+    # marker, is still fully recoverable from the early layer's own
+    # tarball directory.
+    "cloudbreak-veteran-layers": BoxCatalogEntry(
+        "cloudbreak-veteran-layers", "Layers", "veteran",
+        ((5000, "http"), (22, "ssh")), 10,
+    ),
 }
 
 # God is each game's final/hardest capstone, Legendary one step below it
