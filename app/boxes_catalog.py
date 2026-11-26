@@ -97,6 +97,23 @@ BOXES: dict[str, BoxCatalogEntry] = {
         "cloudbreak-noob-bucket", "Bucket", "noob",
         ((22, "ssh"), (9000, "http")), 10,
     ),
+    # Beginner tier of Domain Zero Directory: a real, dependency-free
+    # Node.js app with a genuine prototype-pollution auth bypass (naive
+    # recursive merge, no __proto__/constructor/prototype key
+    # filtering -- the same bug class as several real npm CVEs).
+    "domainzero-beginner-helpdesk": BoxCatalogEntry(
+        "domainzero-beginner-helpdesk", "Helpdesk", "beginner",
+        ((22, "ssh"), (5000, "http")), 10,
+    ),
+    # Beginner tier of Cloudbreak Pipeline: a real exposed .git
+    # directory (genuine `git clone` against it works, including
+    # `git update-server-info`) leaking a secret removed from HEAD but
+    # still recoverable from history -- the classic real-world
+    # "exposed .git directory" bug class.
+    "cloudbreak-beginner-gitleak": BoxCatalogEntry(
+        "cloudbreak-beginner-gitleak", "Gitleak", "beginner",
+        ((22, "ssh"), (80, "http")), 10,
+    ),
 }
 
 # God is each game's final/hardest capstone, Legendary one step below it
