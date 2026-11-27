@@ -154,6 +154,18 @@ BOXES: dict[str, BoxCatalogEntry] = {
         "cloudbreak-master-frontdoor", "Front Door", "master",
         ((80, "http"), (2222, "ssh")), 10,
     ),
+    # Master tier of Domain Zero Directory: Pass-the-Hash lateral
+    # pivot (a raw NTLM hash used directly as the credential, no
+    # cracking needed) plus GraphQL introspection/overfetch on an
+    # internal API. frontdesk (the real Samba AD DC) also relays
+    # :2222->backoffice:22 and :4000->backoffice:4000 so the box stays
+    # completable end-to-end over its own published ports alone.
+    "domainzero-master-twosites": BoxCatalogEntry(
+        "domainzero-master-twosites", "Two Sites", "master",
+        ((445, "smb"), (139, "smb"), (389, "ldap"), (636, "ldaps"), (88, "kerberos"),
+         (464, "kpasswd"), (53, "dns"), (135, "rpc"), (3268, "gc"), (3269, "gc-ssl"),
+         (2222, "ssh"), (4000, "graphql")), 10,
+    ),
 }
 
 # God is each game's final/hardest capstone, Legendary one step below it
