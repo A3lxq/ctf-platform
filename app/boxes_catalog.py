@@ -166,6 +166,18 @@ BOXES: dict[str, BoxCatalogEntry] = {
          (464, "kpasswd"), (53, "dns"), (135, "rpc"), (3268, "gc"), (3269, "gc-ssl"),
          (2222, "ssh"), (4000, "graphql")), 10,
     ),
+    # Expert tier of Domain Zero Directory: AD ACL abuse
+    # (ForceChangePassword) discovered via an authenticated LDAP read,
+    # plus a NoSQL operator-injection auth bypass on a supporting
+    # internal app. directory also relays :8080->search-intranet:5000
+    # so the box stays completable end-to-end over its own published
+    # ports alone.
+    "domainzero-expert-directory": BoxCatalogEntry(
+        "domainzero-expert-directory", "Directory", "expert",
+        ((445, "smb"), (139, "smb"), (389, "ldap"), (636, "ldaps"), (88, "kerberos"),
+         (464, "kpasswd"), (53, "dns"), (135, "rpc"), (3268, "gc"), (3269, "gc-ssl"),
+         (8080, "http")), 10,
+    ),
 }
 
 # God is each game's final/hardest capstone, Legendary one step below it
